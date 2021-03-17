@@ -1,0 +1,77 @@
+---
+# tasks file for control-plane-kubeadm
+#
+- name: copy kubeadm config
+  copy:
+          src: config.yaml
+          dest: /home/{{ansible_user}}
+
+- name: create pji dir
+  become: true
+  shell: mkdir -p /etc/kubernetes/pki
+
+- name: copy certs if not master node 1
+  copy:
+          src: ~/ansible/kubeadm/prod-cp1/etc/kubernetes/pki/{{item}}
+          dest: /etc/kubernetes/pki/{{item}}
+  with_items:
+          - apiserver-kubelet-client.crt
+          - apiserver-kubelet-client.key
+          - ca.crt
+          - ca.key
+          - front-proxy-ca.crt
+          - front-proxy-ca.key
+          - front-proxy-client.crt
+          - front-proxy-client.key
+          - sa.key
+          - sa.pub
+  when: inventory_hostname != "prod-cp1"
+
+- name: reset kubeadm
+  become: true
+  shell: kubeadm reset --force
+
+- name: create cluster and save join key
+  become: true
+  shell: cd /home/{{ansible_user}} && kubeadm init --config=config.yaml && \
+        kubeadm token create --print-join-command > join.txt
+  ignore_errors: true
+
+- name: get join key from master node 1
+  fetch:
+          src: /home/{{ansible_user}}/join.txt
+          dest: ~/ansible/kubeadm
+  when: inventory_hostname == "prod-cp1"
+
+- name: fetch certs if master node 1
+  fetch:
+          src: /etc/kubernetes/pki/{{item}}
+          dest: ~/ansible/kubeadm
+  with_items:
+          - apiserver-kubelet-client.crt  
+          - apiserver-kubelet-client.key
+          - apiserver.key
+          - apiserver.crt
+          - ca.crt
+          - ca.key
+          - front-proxy-ca.crt
+          - front-proxy-ca.key
+          - front-proxy-client.crt
+          - front-proxy-client.key
+          - sa.key
+          - sa.pub
+  when: inventory_hostname == "prod-cp1"
+
+- name: configure kubectl
+  become: true
+  shell: cd /home/{{ansible_user}} && rm -rf .kube && mkdir -p .kube && \
+        cp -i /etc/kubernetes/admin.conf /home/{{ansible_user}}/.kube/config && \
+        chown {{ansible_user}}:{{ansible_user}} /home/{{ansible_user}}/.kube/config && \
+        rm -rf /root/.kube/config && \
+        mkdir -p /root/.kube && ln -s /home/{{ansible_user}}/.kube/config /root/.kube
+
+- name: create network when if master 3
+  become: false
+  shell: cd /home/{{ansible_user}} && kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+  when: inventory_hostname == "prod-cp3"
+

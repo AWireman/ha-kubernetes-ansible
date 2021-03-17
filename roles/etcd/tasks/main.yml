@@ -1,0 +1,31 @@
+---
+# tasks file for etcd
+#
+
+- name: create etcd dir
+  become: true
+  shell: mkdir -p /etc/etcd /var/lib/etcd
+
+- name: copy cfssl certs
+  copy:
+          src: ~/ansible/cfssl/prod-cplb/home/{{ansible_user}}/{{item}}
+          dest: /etc/etcd
+  with_items:
+          - ca.pem
+          - kubernetes.pem
+          - kubernetes-key.pem
+
+- name: download etcd
+  become: true
+  shell: wget https://github.com/coreos/etcd/releases/download/v3.3.9/etcd-v3.3.9-linux-amd64.tar.gz && \
+        tar xvzf etcd-v3.3.9-linux-amd64.tar.gz && \
+        mv etcd-v3.3.9-linux-amd64/etcd* /usr/local/bin/
+
+- name: copy etcd systemd unit file
+  copy:
+          src: etcd.{{inventory_hostname}}.service
+          dest: /etc/systemd/system/etcd.service
+
+- name: enable and restart etcd
+  become: true
+  shell: systemctl enable etcd && systemctl restart etcd

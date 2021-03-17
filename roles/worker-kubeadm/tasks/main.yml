@@ -1,0 +1,11 @@
+---
+# tasks file for worker-kubeadm
+#
+- name: copy join command to worker
+  copy:
+          src: ~/kubeadm/prod-cp1/home/{{ansible_user}}/join.txt
+          dest: /home/{{ansible_user}}
+
+- name: join cluster
+  become: true
+  shell: cd /home/{{ansible_user}} && sh join.txt

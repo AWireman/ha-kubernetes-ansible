@@ -1,0 +1,14 @@
+---
+- hosts: cp-masters
+  become: true
+  gather_facts: true
+  vars_files:
+          - /etc/ansible/vault.yml
+  vars:
+          ansible_user: '{{the_user}}'
+          ansible_become_pass: '{{su_password}}'
+  roles:
+          - { role: ../roles/docker }
+          - { role: ../roles/kubernetes }
+          - { role: ../roles/etcd }
+

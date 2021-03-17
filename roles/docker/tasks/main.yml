@@ -1,0 +1,35 @@
+---
+# tasks file for docker
+- name: install pre-reqs
+  become: true
+  apt: name={{item}} state=present
+  with_items:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common 
+  tags: [ 'packages' ]
+
+- name: add docker gpg
+  become: true
+  shell: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+  tags: [ 'packages' ]
+
+- name: add apt repository
+  shell: add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  tags: [ 'packages' ]
+
+- name: install docker
+  become: true
+  apt: name={{item}} state=present
+  with_items:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+  tags: [ 'packages' ]
+
+- name: grant docker permissions
+  become: true
+  shell: usermod -aG docker awireman 
+

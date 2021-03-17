@@ -1,0 +1,12 @@
+---
+- hosts: cp-masters
+  become: true
+  serial: 1
+  gather_facts: true
+  vars_files:
+          - /etc/ansible/vault.yml
+  vars:
+          ansible_user: '{{the_user}}'
+          ansible_become_pass: '{{su_password}}'
+  roles:
+          - { role: ../roles/control-plane-kubeadm }
